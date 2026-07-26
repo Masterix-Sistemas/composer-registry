@@ -10,8 +10,19 @@ does not configure Satis archives, so the Pages deployment contains Composer
 metadata only. Package source and any GitHub-provided distribution archives
 remain authenticated and are served directly by GitHub.
 
-Run the **publish** workflow manually to rebuild and deploy the catalog. The
-workflow mints a short-lived token from the `composer-registry-reader` GitHub
-App using `COMPOSER_REGISTRY_READER_APP_ID` and
-`COMPOSER_REGISTRY_READER_PRIVATE_KEY`; that App needs read-only Contents
-access only to the repositories named in `satis.json`.
+The **publish** workflow rebuilds and deploys the catalog in either case:
+
+- automatically after an approved package Release Please creates a release; or
+- manually through **Run workflow**, for recovery and refreshes.
+
+The package release workflow mints a short-lived, repository-scoped GitHub App
+token and sends a `composer-package-released` dispatch only when Release Please
+reports that it created a release. Its payload contains only the Composer
+package name and release tag. The catalog accepts the event only when that
+package appears in its reviewed `satis.json` allowlist, then verifies the
+dispatched tag in the generated metadata.
+
+For each build, the workflow mints a short-lived read-only GitHub App token for
+the repositories named in `satis.json`. Credential values are stored only as
+GitHub Actions secrets; neither the repository nor the generated catalog
+contains credentials.

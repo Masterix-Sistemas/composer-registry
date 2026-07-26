@@ -1,6 +1,9 @@
 name: publish
 
 on:
+  repository_dispatch:
+    types:
+      - composer-package-released
   workflow_dispatch:
 
 permissions:
@@ -15,8 +18,22 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      EXPECTED_PACKAGE: ${{ github.event.client_payload.package || '' }}
+      EXPECTED_TAG: ${{ github.event.client_payload.tag || '' }}
 
     steps:
+      - name: Validate release dispatch
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          PACKAGE: ${{ github.event.client_payload.package }}
+          TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          test -n "$PACKAGE"
+          test -n "$TAG"
+          jq -e --arg package "$PACKAGE" \
+            '(.require | keys) | index($package)' satis.json >/dev/null
+
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
@@ -40,8 +57,16 @@ jobs:
       - name: Verify generated catalog
         run: |
           test -f public/packages.json
-          jq -e '."available-packages" | index("masterix/identity-access")' public/packages.json
-          jq -e '.packages["masterix/identity-access"] | any(.version == "v0.1.32")' public/include/*.json
+          jq -e --slurpfile config satis.json '
+            ($config[0].require | keys) as $required
+            | (."available-packages" // []) as $available
+            | all($required[]; . as $package | ($available | index($package)))
+          ' public/packages.json
+          if [ "$GITHUB_EVENT_NAME" = 'repository_dispatch' ]; then
+            jq -e --slurp --arg package "$EXPECTED_PACKAGE" --arg tag "$EXPECTED_TAG" \
+              'map(.packages[$package] // []) | flatten | any(.version == $tag)' \
+            public/include/*.json
+          fi
           test ! -d public/dist
           test ! -d public/downloads
           ! find public -type f \( -name '*.zip' -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
@@ -76,7 +101,7 @@ jobs:
 
       - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
-          php-version: '8.5'
+          php-version: "8.5"
           tools: composer:v2
 
       - uses: ./.github/actions/configure-reader-auth
