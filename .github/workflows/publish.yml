@@ -1,6 +1,9 @@
 name: publish
 
 on:
+  repository_dispatch:
+    types:
+      - composer-package-released
   workflow_dispatch:
 
 permissions:
@@ -15,8 +18,27 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      EXPECTED_TAG: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.tag || 'v0.1.32' }}
 
     steps:
+      - name: Validate release dispatch
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          PACKAGE: ${{ github.event.client_payload.package }}
+          REPOSITORY: ${{ github.event.client_payload.repository }}
+          TAG: ${{ github.event.client_payload.tag }}
+          VERSION: ${{ github.event.client_payload.version }}
+          SHA: ${{ github.event.client_payload.sha }}
+          RELEASE_URL: ${{ github.event.client_payload.release_url }}
+        run: |
+          test "$PACKAGE" = 'masterix/identity-access'
+          test "$REPOSITORY" = 'Masterix-Sistemas/identity-access'
+          test -n "$TAG"
+          test -n "$VERSION"
+          test -n "$SHA"
+          test -n "$RELEASE_URL"
+
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
@@ -41,7 +63,9 @@ jobs:
         run: |
           test -f public/packages.json
           jq -e '."available-packages" | index("masterix/identity-access")' public/packages.json
-          jq -e '.packages["masterix/identity-access"] | any(.version == "v0.1.32")' public/include/*.json
+          jq -e --arg tag "$EXPECTED_TAG" \
+            '.packages["masterix/identity-access"] | any(.version == $tag)' \
+            public/include/*.json
           test ! -d public/dist
           test ! -d public/downloads
           ! find public -type f \( -name '*.zip' -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
@@ -76,7 +100,7 @@ jobs:
 
       - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
-          php-version: '8.5'
+          php-version: "8.5"
           tools: composer:v2
 
       - uses: ./.github/actions/configure-reader-auth
