@@ -1,0 +1,16 @@
+{
+    "name": "masterix/composer-registry",
+    "description": "Public Composer metadata for approved Masterix private packages.",
+    "homepage": "https://masterix-sistemas.github.io/composer-registry",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Masterix-Sistemas/identity-access.git"
+        }
+    ],
+    "require": {
+        "masterix/identity-access": ">=0.1.32"
+    },
+    "minimum-stability": "stable",
+    "output-dir": "public"
+}
