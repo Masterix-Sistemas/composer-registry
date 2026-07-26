@@ -19,25 +19,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      EXPECTED_TAG: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.tag || 'v0.1.32' }}
+      EXPECTED_PACKAGE: ${{ github.event.client_payload.package || '' }}
+      EXPECTED_TAG: ${{ github.event.client_payload.tag || '' }}
 
     steps:
       - name: Validate release dispatch
         if: ${{ github.event_name == 'repository_dispatch' }}
         env:
           PACKAGE: ${{ github.event.client_payload.package }}
-          REPOSITORY: ${{ github.event.client_payload.repository }}
           TAG: ${{ github.event.client_payload.tag }}
-          VERSION: ${{ github.event.client_payload.version }}
-          SHA: ${{ github.event.client_payload.sha }}
-          RELEASE_URL: ${{ github.event.client_payload.release_url }}
         run: |
-          test "$PACKAGE" = 'masterix/identity-access'
-          test "$REPOSITORY" = 'Masterix-Sistemas/identity-access'
+          test -n "$PACKAGE"
           test -n "$TAG"
-          test -n "$VERSION"
-          test -n "$SHA"
-          test -n "$RELEASE_URL"
+          jq -e --arg package "$PACKAGE" \
+            '(.require | keys) | index($package)' satis.json >/dev/null
 
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -62,10 +57,16 @@ jobs:
       - name: Verify generated catalog
         run: |
           test -f public/packages.json
-          jq -e '."available-packages" | index("masterix/identity-access")' public/packages.json
-          jq -e --arg tag "$EXPECTED_TAG" \
-            '.packages["masterix/identity-access"] | any(.version == $tag)' \
+          jq -e --slurpfile config satis.json '
+            ($config[0].require | keys) as $required
+            | (."available-packages" // []) as $available
+            | all($required[]; . as $package | ($available | index($package)))
+          ' public/packages.json
+          if [ "$GITHUB_EVENT_NAME" = 'repository_dispatch' ]; then
+            jq -e --slurp --arg package "$EXPECTED_PACKAGE" --arg tag "$EXPECTED_TAG" \
+              'map(.packages[$package] // []) | flatten | any(.version == $tag)' \
             public/include/*.json
+          fi
           test ! -d public/dist
           test ! -d public/downloads
           ! find public -type f \( -name '*.zip' -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
