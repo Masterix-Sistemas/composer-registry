@@ -1,10 +1,17 @@
 name: publish
 
 on:
-  repository_dispatch:
-    types:
-      - composer-package-released
   workflow_dispatch:
+    inputs:
+      expected_package:
+        description: Composer package that must be present in the generated catalog.
+        required: true
+        default: masterix/identity-access
+        type: string
+      expected_tag:
+        description: Released tag that must be present in the generated catalog.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,19 +26,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      EXPECTED_PACKAGE: ${{ github.event.client_payload.package || '' }}
-      EXPECTED_TAG: ${{ github.event.client_payload.tag || '' }}
+      EXPECTED_PACKAGE: ${{ inputs.expected_package }}
+      EXPECTED_TAG: ${{ inputs.expected_tag }}
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
-      - name: Validate release dispatch
-        if: ${{ github.event_name == 'repository_dispatch' }}
+      - name: Validate expected catalog entry
         env:
-          PACKAGE: ${{ github.event.client_payload.package }}
-          TAG: ${{ github.event.client_payload.tag }}
+          PACKAGE: ${{ inputs.expected_package }}
+          TAG: ${{ inputs.expected_tag }}
         run: |
           test -n "$PACKAGE"
           test -n "$TAG"
@@ -62,11 +68,9 @@ jobs:
             | (."available-packages" // []) as $available
             | all($required[]; . as $package | ($available | index($package)))
           ' public/packages.json
-          if [ "$GITHUB_EVENT_NAME" = 'repository_dispatch' ]; then
-            jq -e --slurp --arg package "$EXPECTED_PACKAGE" --arg tag "$EXPECTED_TAG" \
-              'map(.packages[$package] // []) | flatten | any(.version == $tag)' \
-            public/include/*.json
-          fi
+          jq -e --slurp --arg package "$EXPECTED_PACKAGE" --arg tag "$EXPECTED_TAG" \
+            'map(.packages[$package] // []) | flatten | any(.version == $tag)' \
+          public/include/*.json
           test ! -d public/dist
           test ! -d public/downloads
           ! find public -type f \( -name '*.zip' -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
