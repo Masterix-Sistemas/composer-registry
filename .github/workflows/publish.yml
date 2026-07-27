@@ -47,7 +47,7 @@ jobs:
           ' public/packages.json
           jq -e --slurp --slurpfile config satis.json '
             ($config[0].require | keys) as $required
-            | reduce .[] as $catalog ({}; . + ($catalog.packages // {})) as $packages
+            | (reduce .[] as $catalog ({}; . + ($catalog.packages // {}))) as $packages
             | all($required[]; . as $package | (($packages[$package] // {}) | length) > 0)
           ' \
           public/include/*.json
