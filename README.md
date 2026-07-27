@@ -10,19 +10,17 @@ does not configure Satis archives, so the Pages deployment contains Composer
 metadata only. Package source and any GitHub-provided distribution archives
 remain authenticated and are served directly by GitHub.
 
-The **publish** workflow rebuilds and deploys the catalog in either case:
+The **publish** workflow is run manually through **Run workflow**. Each run
+rebuilds and deploys the complete catalog from the reviewed `satis.json`
+allowlist; it has no inputs and receives no dispatches from package
+repositories. Satis fetches every configured VCS source and publishes its
+stable versions that satisfy each package constraint. The `require` object is
+the explicit package allowlist: use `"*"` for each approved package so releases
+are not constrained to a manually maintained minimum version.
 
-- automatically after an approved package Release Please creates a release; or
-- manually through **Run workflow**, for recovery and refreshes.
-
-The package release workflow mints a short-lived, repository-scoped GitHub App
-token and sends a `composer-package-released` dispatch only when Release Please
-reports that it created a release. Its payload contains only the Composer
-package name and release tag. The catalog accepts the event only when that
-package appears in its reviewed `satis.json` allowlist, then verifies the
-dispatched tag in the generated metadata.
-
-For each build, the workflow mints a short-lived read-only GitHub App token for
-the repositories named in `satis.json`. Credential values are stored only as
-GitHub Actions secrets; neither the repository nor the generated catalog
+For each build, the workflow derives the Masterix GitHub repositories from
+`satis.json` and mints a short-lived read-only GitHub App token scoped to all
+of them. Adding another approved package therefore requires only its reviewed
+repository and constraint in `satis.json`. Credential values are stored only
+as GitHub Actions secrets; neither the repository nor the generated catalog
 contains credentials.

@@ -2,16 +2,6 @@ name: publish
 
 on:
   workflow_dispatch:
-    inputs:
-      expected_package:
-        description: Composer package that must be present in the generated catalog.
-        required: true
-        default: masterix/identity-access
-        type: string
-      expected_tag:
-        description: Released tag that must be present in the generated catalog.
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -25,24 +15,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      EXPECTED_PACKAGE: ${{ inputs.expected_package }}
-      EXPECTED_TAG: ${{ inputs.expected_tag }}
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
-
-      - name: Validate expected catalog entry
-        env:
-          PACKAGE: ${{ inputs.expected_package }}
-          TAG: ${{ inputs.expected_tag }}
-        run: |
-          test -n "$PACKAGE"
-          test -n "$TAG"
-          jq -e --arg package "$PACKAGE" \
-            '(.require | keys) | index($package)' satis.json >/dev/null
 
       - uses: ./.github/actions/configure-reader-auth
         with:
@@ -68,8 +45,11 @@ jobs:
             | (."available-packages" // []) as $available
             | all($required[]; . as $package | ($available | index($package)))
           ' public/packages.json
-          jq -e --slurp --arg package "$EXPECTED_PACKAGE" --arg tag "$EXPECTED_TAG" \
-            'map(.packages[$package] // []) | flatten | any(.version == $tag)' \
+          jq -e --slurp --slurpfile config satis.json '
+            ($config[0].require | keys) as $required
+            | reduce .[] as $catalog ({}; . + ($catalog.packages // {})) as $packages
+            | all($required[]; . as $package | (($packages[$package] // {}) | length) > 0)
+          ' \
           public/include/*.json
           test ! -d public/dist
           test ! -d public/downloads
@@ -123,4 +103,6 @@ jobs:
           cd "$RUNNER_TEMP/consumer"
           composer init --name=masterix/registry-verification --no-interaction
           composer config repositories.masterix composer "$REGISTRY_URL"
-          composer require masterix/identity-access:v0.1.32 --no-interaction --no-progress
+          mapfile -t packages < <(jq -r '.require | keys[]' "$GITHUB_WORKSPACE/satis.json")
+          test "${#packages[@]}" -gt 0
+          composer require "${packages[@]}" --no-interaction --no-progress

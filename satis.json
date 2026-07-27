@@ -9,7 +9,7 @@
         }
     ],
     "require": {
-        "masterix/identity-access": ">=0.1.32"
+        "masterix/identity-access": "*"
     },
     "minimum-stability": "stable",
     "output-dir": "public"
