@@ -65,8 +65,10 @@ plugin. Before opening that change, ensure that:
    create stable releases.
 2. The Registry GitHub App has established read-only access to the plugin
    repository.
-3. A reviewed change adds the repository URL under `repositories` and its
-   package name under `require` in `satis.json`.
+3. A reviewed change adds the plugin's Masterix GitHub HTTPS VCS URL in the
+   form `https://github.com/Masterix-Sistemas/<repository>.git` under
+   `repositories`, and its package name under `require` in `satis.json`. The
+   reader-auth action derives its authorized repositories from that URL form.
 4. The reviewed Registry change has merged, the plugin has a stable release,
    and a Registry maintainer manually runs **publish** as described above.
 
