@@ -8,8 +8,8 @@ automatically.
 
 For each future private plugin:
 
-1. Complete the plugin's package-native release readiness and tests. The
-   [Identity & Access release guide](https://github.com/Masterix-Sistemas/identity-access/blob/main/docs/release.md)
+1. Complete the plugin's package-native release readiness, including its
+   Release Please readiness and tests. The [Identity & Access release guide](https://github.com/Masterix-Sistemas/identity-access/blob/main/docs/release.md)
    is the concrete example of that owner boundary.
 2. Establish the Registry's read-only source access before admitting the
    plugin. Operational access details remain outside this repository.

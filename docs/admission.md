@@ -7,7 +7,8 @@ a plugin and it does not publish the catalog automatically.
 
 Before requesting a Registry change, confirm that:
 
-1. The plugin is ready for its own package-native release lifecycle.
+1. The plugin is ready for its own package-native release lifecycle, including
+   Release Please readiness and package-native tests.
 2. The Registry's read-only GitHub App reader access has been established for
    the publication workflow. Operational installation details remain outside
    this repository.
