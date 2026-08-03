@@ -12,6 +12,22 @@ Masterix private packages. Its catalog is published at
 - [Platform guide](https://github.com/Masterix-Sistemas/platform)
   covers consuming released packages and integrating a local plugin checkout.
 
+## Registry guides
+
+The [user-facing guides](docs/README.md) keep the Registry-owned procedures
+together and link to the plugin and Platform procedures that belong elsewhere:
+
+- [Release handoff](docs/release-handoff.md) — the boundary between a stable
+  plugin release and manual catalog publication.
+- [Plugin admission](docs/admission.md) — the reviewed source and package
+  allowlist path.
+- [Manual publication](docs/publication.md) — build, deploy, and consumer
+  verification from the `publish` workflow.
+- [Consumer and local integration](docs/consumer-integration.md) — metadata-only
+  consumption and the Platform-owned local checkout path.
+- [Credential inventory](docs/credential-inventory.md) — names-only Actions
+  metadata and observed workflow references.
+
 The Registry owns catalog admission and publication. Plugin repositories own
 their release policy, and Platform owns consumer and local-integration
 configuration.
